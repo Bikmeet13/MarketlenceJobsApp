@@ -87,6 +87,12 @@ export default function Login() {
           Don't have an account? Sign Up
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/employer-login")}>
+        <Text style={styles.employerLink}>
+          Are you an employer? Employer sign in
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -132,5 +138,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#2563EB",
     fontWeight: "600",
+  },
+
+  employerLink: {
+    marginTop: 14,
+    textAlign: "center",
+    color: "#0f766e",
+    fontWeight: "700",
   },
 });
