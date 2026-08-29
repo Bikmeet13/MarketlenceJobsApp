@@ -36,7 +36,7 @@ export default function Login() {
       Alert.alert("Success", "Login successful 🚀");
 
       if (role === "user") {
-        router.replace("/home");
+        router.replace("/profile");
       } else {
         Alert.alert("Access Denied", "Use Admin Login ❌");
       }
