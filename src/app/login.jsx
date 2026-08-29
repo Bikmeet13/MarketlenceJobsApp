@@ -93,6 +93,12 @@ export default function Login() {
           Are you an employer? Employer sign in
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/career-tools")}>
+        <Text style={styles.toolsLink}>
+          Resume Builder & Docs Converter
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -144,6 +150,13 @@ const styles = StyleSheet.create({
     marginTop: 14,
     textAlign: "center",
     color: "#0f766e",
+    fontWeight: "700",
+  },
+
+  toolsLink: {
+    marginTop: 14,
+    textAlign: "center",
+    color: "#7c3aed",
     fontWeight: "700",
   },
 });
