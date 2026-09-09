@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Linking, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as DocumentPicker from "expo-document-picker";
 import api from "../../services/api";
 
 export default function JobDetails() {
@@ -9,6 +10,8 @@ export default function JobDetails() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [resume, setResume] = useState(null);
+  const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     if (source) {
@@ -37,6 +40,36 @@ export default function JobDetails() {
     } else {
       Alert.alert("Unable to open application", "Please try again later.");
     }
+  };
+
+  const selectResume = async () => {
+    const result = await DocumentPicker.getDocumentAsync({ type: "application/pdf", copyToCacheDirectory: true, multiple: false });
+    if (result.canceled) return;
+    const selected = result.assets?.[0];
+    if (!selected || (!String(selected.name || "").toLowerCase().endsWith(".pdf") && selected.mimeType !== "application/pdf")) {
+      Alert.alert("PDF resume required", "Please select a PDF version of your resume.");
+      return;
+    }
+    setResume(selected);
+  };
+
+  const applyInsideApp = async () => {
+    const [token, role] = await AsyncStorage.multiGet(["token", "role"]);
+    if (!token[1] || role[1] !== "user") {
+      Alert.alert("Log in to apply", "Use a candidate account to apply for jobs.", [{ text: "Not now", style: "cancel" }, { text: "Log in", onPress: () => router.push("/login") }]);
+      return;
+    }
+    if (!resume) { await selectResume(); return; }
+    setApplying(true);
+    try {
+      const form = new FormData();
+      form.append("jobId", String(id));
+      form.append("resume", { uri: resume.uri, name: resume.name || "resume.pdf", type: resume.mimeType || "application/pdf" });
+      await api.post("/apply", form, { headers: { "Content-Type": "multipart/form-data" } });
+      Alert.alert("Application submitted", "Your application is saved. You can follow it from Applications.", [{ text: "View applications", onPress: () => router.replace("/applications") }, { text: "Done" }]);
+    } catch (requestError) {
+      Alert.alert("Could not apply", requestError?.response?.data?.error || "Please try again.");
+    } finally { setApplying(false); }
   };
 
   const saveJob = async () => {
@@ -89,9 +122,7 @@ export default function JobDetails() {
         {job.skills && <View style={styles.section}><Text style={styles.sectionTitle}>Skills</Text><Text style={styles.description}>{job.skills}</Text></View>}
         {job.salary && <View style={styles.section}><Text style={styles.sectionTitle}>Salary</Text><Text style={styles.salary}>{job.salary}</Text></View>}
 
-        <TouchableOpacity onPress={applyOnPortal} style={styles.applyButton}>
-          <Text style={styles.applyText}>Apply for this job</Text>
-        </TouchableOpacity>
+        {source || job.applyLink ? <TouchableOpacity onPress={applyOnPortal} style={styles.applyButton}><Text style={styles.applyText}>Apply on company website</Text></TouchableOpacity> : job.apply_enabled === false ? <View style={styles.closed}><Text style={styles.closedText}>Applications are not available for this job.</Text></View> : <><TouchableOpacity onPress={applyInsideApp} style={styles.applyButton} disabled={applying}><Text style={styles.applyText}>{applying ? "Submitting application..." : resume ? "Submit application" : "Choose PDF resume to apply"}</Text></TouchableOpacity>{resume ? <TouchableOpacity onPress={selectResume} style={styles.changeResume}><Text style={styles.changeResumeText}>PDF selected: {resume.name} · Change</Text></TouchableOpacity> : <Text style={styles.resumeHint}>A PDF resume is required to apply in the app.</Text>}</>}
         <TouchableOpacity onPress={saveJob} style={styles.saveButton}><Text style={styles.saveText}>♡ Save job</Text></TouchableOpacity>
         <Text style={styles.note}>You will continue securely on Marketlence Jobs.</Text>
       </ScrollView>
@@ -119,6 +150,11 @@ const styles = StyleSheet.create({
   applyText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
   saveButton: { borderWidth: 1.5, borderColor: "#2563EB", alignItems: "center", borderRadius: 15, paddingVertical: 15, marginTop: 12 },
   saveText: { color: "#2563EB", fontSize: 16, fontWeight: "800" },
+  changeResume: { alignItems: "center", paddingVertical: 10 },
+  changeResumeText: { color: "#2563EB", fontWeight: "700", fontSize: 12 },
+  resumeHint: { color: "#64748B", textAlign: "center", fontSize: 12, marginTop: 10 },
+  closed: { backgroundColor: "#FEE2E2", borderRadius: 14, padding: 15, marginTop: 30 },
+  closedText: { color: "#B91C1C", textAlign: "center", fontWeight: "700" },
   note: { color: "#64748B", textAlign: "center", fontSize: 12, marginTop: 10 },
   error: { color: "#374151", fontWeight: "700", fontSize: 16, textAlign: "center" },
   backButton: { marginTop: 16, backgroundColor: "#2563EB", paddingHorizontal: 16, paddingVertical: 11, borderRadius: 10 },
