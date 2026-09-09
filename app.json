@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MarketlenceJobsApp",
-    "slug": "MarketlenceJobsApp",
+    "name": "Marketlence Jobs",
+    "slug": "marketlence-jobs",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -11,6 +11,8 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.marketlence.jobs",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -37,6 +39,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4099e827-1efc-4f4c-b227-e3ab0c955cf4"
+      }
     }
   }
 }
