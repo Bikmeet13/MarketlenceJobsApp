@@ -7,6 +7,7 @@ import {
   Image,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +16,16 @@ import {
 } from "react-native";
 import api from "../services/api";
 import BottomNav from "../components/BottomNav";
+
+const COUNTRIES = [
+  { label: "India", code: "in", terms: ["india"] },
+  { label: "United States", code: "us", terms: ["united states", "usa"] },
+  { label: "United Kingdom", code: "gb", terms: ["united kingdom", "uk", "great britain"] },
+  { label: "Canada", code: "ca", terms: ["canada"] },
+  { label: "Australia", code: "au", terms: ["australia"] },
+  { label: "Germany", code: "de", terms: ["germany", "deutschland"] },
+];
+const MODES = ["All modes", "Remote", "Hybrid", "Onsite", "Visa sponsorship"];
 
 function JobCard({ job }) {
   const openJob = async () => {
@@ -68,15 +79,18 @@ export default function Home() {
   const [error, setError] = useState("");
   const [username, setUsername] = useState("there");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [country, setCountry] = useState(COUNTRIES[0]);
+  const [mode, setMode] = useState("All modes");
+  const [sort, setSort] = useState("Newest");
 
-  const loadJobs = async (isRefresh = false) => {
+  const loadJobs = async (isRefresh = false, selectedCountry = country) => {
     isRefresh ? setRefreshing(true) : setLoading(true);
     setError("");
 
     try {
       const [internalResult, adzunaResult, arbeitnowResult] = await Promise.allSettled([
         api.get("/jobs"),
-        api.get("/external-jobs", { params: { country: "in" } }),
+        api.get("/external-jobs", { params: { country: selectedCountry.code } }),
         api.get("/arbeitnow-jobs"),
       ]);
 
@@ -97,6 +111,7 @@ export default function Home() {
             skills: "",
             applyLink: job.redirect_url,
             source: "adzuna",
+            country: selectedCountry.label,
           }))
         : [];
       const arbeitnowJobs = arbeitnowResult.status === "fulfilled" && Array.isArray(arbeitnowResult.value.data)
@@ -134,19 +149,34 @@ export default function Home() {
       setUsername(stored.username || "there");
       setIsLoggedIn(Boolean(stored.token));
     });
-    loadJobs();
   }, []);
+
+  useEffect(() => {
+    loadJobs(false, country);
+  }, [country]);
 
   const filteredJobs = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return jobs;
-
-    return jobs.filter((job) =>
-      [job.title, job.company, job.location, job.skills, job.mode]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term))
-    );
-  }, [jobs, search]);
+    const countryMatches = (job) => {
+      if (job.source === "adzuna") return job.country === country.label;
+      const place = `${job.country || ""} ${job.location || ""}`.toLowerCase();
+      return country.terms.some((item) => place.includes(item));
+    };
+    const modeMatches = (job) => {
+      if (mode === "All modes") return true;
+      const text = `${job.mode || ""} ${job.type || ""} ${job.skills || ""} ${job.description || ""}`.toLowerCase();
+      return mode === "Visa sponsorship" ? /visa|sponsor/.test(text) : text.includes(mode.toLowerCase());
+    };
+    const visible = jobs.filter((job) => {
+      const searchMatches = !term || [job.title, job.company, job.location, job.skills, job.mode].filter(Boolean).some((value) => String(value).toLowerCase().includes(term));
+      return searchMatches && countryMatches(job) && modeMatches(job);
+    });
+    return visible.sort((a, b) => {
+      const first = new Date(a.posted_at || a.created_at || 0).getTime();
+      const second = new Date(b.posted_at || b.created_at || 0).getTime();
+      return sort === "Oldest" ? first - second : second - first;
+    });
+  }, [jobs, search, country, mode, sort]);
 
   const logout = async () => {
     await AsyncStorage.multiRemove(["token", "role", "userId", "email", "username"]);
@@ -201,6 +231,19 @@ export default function Home() {
               returnKeyType="search"
             />
 
+            <Text style={styles.filterLabel}>Country</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              {COUNTRIES.map((item) => <TouchableOpacity key={item.code} onPress={() => setCountry(item)} style={[styles.chip, country.code === item.code && styles.chipActive]}><Text style={[styles.chipText, country.code === item.code && styles.chipTextActive]}>{item.label}</Text></TouchableOpacity>)}
+            </ScrollView>
+
+            <View style={styles.filterHeader}>
+              <Text style={styles.filterLabel}>Work style</Text>
+              <TouchableOpacity onPress={() => setSort((value) => value === "Newest" ? "Oldest" : "Newest")}><Text style={styles.sort}>{sort} ↓</Text></TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              {MODES.map((item) => <TouchableOpacity key={item} onPress={() => setMode(item)} style={[styles.chip, mode === item && styles.chipActive]}><Text style={[styles.chipText, mode === item && styles.chipTextActive]}>{item}</Text></TouchableOpacity>)}
+            </ScrollView>
+
             <View style={styles.listHeading}>
               <Text style={styles.listTitle}>Latest jobs</Text>
               <Text style={styles.jobCount}>{filteredJobs.length} roles</Text>
@@ -241,6 +284,14 @@ const styles = StyleSheet.create({
   heroTitle: { color: "#FFFFFF", fontSize: 27, fontWeight: "800", lineHeight: 34 },
   heroText: { color: "#DBEAFE", fontSize: 15, lineHeight: 22, marginTop: 8 },
   searchInput: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D7E0F2", borderRadius: 15, paddingHorizontal: 16, paddingVertical: 15, fontSize: 15, color: "#111827", shadowColor: "#1E3A8A", shadowOpacity: 0.07, shadowRadius: 12, elevation: 2 },
+  filterLabel: { color: "#334155", fontWeight: "800", fontSize: 13, marginTop: 17, marginBottom: 9 },
+  filterHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sort: { color: "#2563EB", fontSize: 13, fontWeight: "800", marginTop: 17, marginBottom: 9 },
+  chipRow: { gap: 8, paddingRight: 20 },
+  chip: { borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#FFFFFF", borderRadius: 99, paddingHorizontal: 13, paddingVertical: 9 },
+  chipActive: { backgroundColor: "#2563EB", borderColor: "#2563EB" },
+  chipText: { color: "#475569", fontSize: 12, fontWeight: "700" },
+  chipTextActive: { color: "#FFFFFF" },
   listHeading: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 26, marginBottom: 13 },
   listTitle: { color: "#111827", fontSize: 21, fontWeight: "800" },
   jobCount: { color: "#64748B", fontSize: 13, fontWeight: "600" },
