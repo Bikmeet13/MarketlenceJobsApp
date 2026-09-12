@@ -5,6 +5,7 @@ const items = [
   { key: "home", label: "Home", icon: "⌂", route: "/home" },
   { key: "saved", label: "Saved", icon: "♡", route: "/saved-jobs" },
   { key: "applications", label: "Applied", icon: "◫", route: "/applications" },
+  { key: "news", label: "News", icon: "▣", route: "/employment-news" },
   { key: "profile", label: "Profile", icon: "◉", route: "/profile" },
 ];
 
