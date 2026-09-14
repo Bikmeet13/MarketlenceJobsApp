@@ -88,6 +88,12 @@ export default function Login() {
         </Text>
       </TouchableOpacity>
 
+      <TouchableOpacity onPress={() => router.push("/forgot-password")}>
+        <Text style={styles.forgotLink}>
+          Forgot password?
+        </Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => router.push("/employer-login")}>
         <Text style={styles.employerLink}>
           Are you an employer? Employer sign in
@@ -144,6 +150,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#2563EB",
     fontWeight: "600",
+  },
+
+  forgotLink: {
+    marginTop: 16,
+    textAlign: "right",
+    color: "#2563EB",
+    fontWeight: "700",
   },
 
   employerLink: {
