@@ -35,11 +35,19 @@
           "imageWidth": 76
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3eea395d-2b78-4c5c-8168-6a5e35e8c756"
+      }
+    },
+    "owner": "bikmeet13"
   }
 }
